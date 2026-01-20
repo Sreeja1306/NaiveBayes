@@ -7,9 +7,9 @@ import matplotlib.pyplot as plt
 import requests
 from datetime import datetime
 
-from sklearn.naive_bayes import GaussianNB
+from sklearn.naive_bayes import GaussianNB, MultinomialNB, BernoulliNB
 from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import StandardScaler, LabelEncoder
+from sklearn.preprocessing import StandardScaler, LabelEncoder, MinMaxScaler
 from sklearn.metrics import accuracy_score, confusion_matrix
 
 # ---------------- Logger ----------------
@@ -34,6 +34,13 @@ log("Application started")
 # ---------------- Page Config ----------------
 st.set_page_config("End-to-End Naive Bayes", layout="wide")
 st.title("End-to-End Naive Bayes Platform")
+
+# ---------------- Sidebar ----------------
+st.sidebar.header("Model Selection")
+nb_type = st.sidebar.selectbox(
+    "Choose Naive Bayes Model",
+    ["Gaussian Naive Bayes", "Multinomial Naive Bayes", "Bernoulli Naive Bayes"]
+)
 
 # ---------------- Step 1: Data Ingestion ----------------
 st.header("Step 1: Data Ingestion")
@@ -135,21 +142,34 @@ if x.empty:
     st.error("No numeric features available")
     st.stop()
 
-scaler = StandardScaler()
-x = scaler.fit_transform(x)
+# ---- Scaling based on model ----
+if nb_type == "Gaussian Naive Bayes":
+    scaler = StandardScaler()
+    x = scaler.fit_transform(x)
+    model = GaussianNB()
+
+elif nb_type == "Multinomial Naive Bayes":
+    scaler = MinMaxScaler()
+    x = scaler.fit_transform(x)
+    model = MultinomialNB()
+
+else:  # Bernoulli NB
+    scaler = MinMaxScaler()
+    x = scaler.fit_transform(x)
+    x = (x > 0.5).astype(int)
+    model = BernoulliNB()
 
 x_train, x_test, y_train, y_test = train_test_split(
     x, y, test_size=0.25, random_state=42
 )
 
-model = GaussianNB()
 model.fit(x_train, y_train)
 
 y_pred = model.predict(x_test)
 acc = accuracy_score(y_test, y_pred)
 
 st.success(f"Accuracy: {acc:.2f}")
-log(f"Naive Bayes trained | Accuracy = {acc:.2f}")
+log(f"{nb_type} trained | Accuracy = {acc:.2f}")
 
 cm = confusion_matrix(y_test, y_pred)
 fig, ax = plt.subplots()

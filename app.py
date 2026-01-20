@@ -36,9 +36,9 @@ st.set_page_config("End-to-End Naive Bayes", layout="wide")
 st.title("End-to-End Naive Bayes Platform")
 
 # ---------------- Sidebar ----------------
-st.sidebar.header("Model Selection")
+st.sidebar.header("Naive Bayes Settings")
 nb_type = st.sidebar.selectbox(
-    "Choose Naive Bayes Model",
+    "Naive Bayes Variant",
     ["Gaussian Naive Bayes", "Multinomial Naive Bayes", "Bernoulli Naive Bayes"]
 )
 
@@ -129,11 +129,14 @@ else:
 # ---------------- Step 6: Train Naive Bayes ----------------
 st.header("Step 6: Train Naive Bayes")
 
-target = st.selectbox("Select target column", df_model.columns)
-y = df_model[target]
+# ✔ Restrict target to categorical columns
+categorical_cols = df_model.select_dtypes(include=["object"]).columns
+if len(categorical_cols) == 0:
+    st.error("No categorical target column found for classification")
+    st.stop()
 
-if y.dtype == object:
-    y = LabelEncoder().fit_transform(y)
+target = st.selectbox("Select target column", categorical_cols)
+y = LabelEncoder().fit_transform(df_model[target])
 
 x = df_model.drop(columns=[target])
 x = x.select_dtypes(include=np.number)
@@ -142,7 +145,7 @@ if x.empty:
     st.error("No numeric features available")
     st.stop()
 
-# ---- Scaling based on model ----
+# ---- Model-specific preprocessing ----
 if nb_type == "Gaussian Naive Bayes":
     scaler = StandardScaler()
     x = scaler.fit_transform(x)
@@ -153,7 +156,7 @@ elif nb_type == "Multinomial Naive Bayes":
     x = scaler.fit_transform(x)
     model = MultinomialNB()
 
-else:  # Bernoulli NB
+else:  # Bernoulli Naive Bayes
     scaler = MinMaxScaler()
     x = scaler.fit_transform(x)
     x = (x > 0.5).astype(int)
